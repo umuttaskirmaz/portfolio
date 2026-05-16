@@ -1,0 +1,115 @@
+.header {
+  display: flex;
+  max-width: var(--cMaxWidth);
+  width: var(--cWidth);
+  justify-content: flex-end;
+  padding: 20px 0px;
+  margin-bottom: -100px;
+  box-sizing: border-box;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+  z-index: 9999;
+}
+.header ul {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  column-gap: 40px;
+  row-gap: 8px;
+  align-items: end;
+}
+.header ul li {
+  margin-left: 0px;
+  letter-spacing: 1px;
+  color: #ccc;
+  font-weight: 600;
+  cursor: pointer;
+}
+.navbar-locale-floating {
+  position: fixed;
+  left: max(20px, calc((100vw - var(--cWidth)) / 2));
+  top: 20px;
+  z-index: 10000;
+  display: block;
+}
+.navbar-locale-floating select {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(14, 11, 18, 0.72);
+  color: #b8b2c2;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 110px;
+}
+.navbar-locale-floating select:hover,
+.navbar-locale-floating select:focus {
+  color: #fff;
+  border-color: rgba(194, 164, 255, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(194, 164, 255, 0.2);
+}
+.navbar-connect {
+  position: absolute;
+  display: none;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 15px;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+.navbar-title {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+}
+@media only screen and (min-width: 500px) {
+  .header {
+    padding: 20px 0px;
+  }
+  .header ul {
+    flex-direction: row;
+    align-items: center;
+    font-size: 14px;
+    justify-content: flex-end;
+  }
+  .header ul li {
+    color: #eae5ec;
+  }
+}
+@media only screen and (min-width: 900px) {
+  .navbar-connect {
+    display: block;
+  }
+}
+@media only screen and (min-width: 1200px) {
+  .header {
+    padding: 35px 0px;
+  }
+  .header ul {
+    column-gap: 80px;
+    font-size: 16px;
+  }
+  .navbar-connect {
+    font-size: 16px;
+  }
+  .navbar-locale-floating {
+    top: 35px;
+  }
+  .navbar-locale-floating select {
+    font-size: 12px;
+    padding: 8px 14px;
+  }
+}
