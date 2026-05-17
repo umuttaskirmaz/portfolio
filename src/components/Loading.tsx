@@ -15,27 +15,49 @@ const Loading = ({ percent }: { percent: number }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [clicked, setClicked] = useState(false);
 
-  if (percent >= 100) {
-    setTimeout(() => {
+  useEffect(() => {
+    if (percent < 100 || loaded) return;
+
+    let isLoadedTimeout: number | undefined;
+    const loadedTimeout = window.setTimeout(() => {
       setLoaded(true);
-      setTimeout(() => {
+      isLoadedTimeout = window.setTimeout(() => {
         setIsLoaded(true);
       }, 1000);
     }, 600);
-  }
+
+    return () => {
+      window.clearTimeout(loadedTimeout);
+      if (isLoadedTimeout) {
+        window.clearTimeout(isLoadedTimeout);
+      }
+    };
+  }, [percent, loaded]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+
+    let isMounted = true;
+    let timeoutId: number | undefined;
+
     import("./utils/initialFX").then((module) => {
-      if (isLoaded) {
-        setClicked(true);
-        setTimeout(() => {
-          if (module.initialFX) {
-            module.initialFX();
-          }
-          setIsLoading(false);
-        }, 900);
-      }
+      if (!isMounted) return;
+
+      setClicked(true);
+      timeoutId = window.setTimeout(() => {
+        if (module.initialFX) {
+          module.initialFX();
+        }
+        setIsLoading(false);
+      }, 900);
     });
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [isLoaded]);
 
   function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
