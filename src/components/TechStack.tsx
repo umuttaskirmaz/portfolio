@@ -58,34 +58,37 @@ function createIconTexture(
     return new THREE.CanvasTexture(canvas);
   }
 
-  context.fillStyle = "#f7f4ff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-
   const gradient = context.createRadialGradient(
     canvas.width / 2,
     canvas.height / 2,
     120,
     canvas.width / 2,
     canvas.height / 2,
-    440
+    470
   );
-  gradient.addColorStop(0, "#ffffff");
-  gradient.addColorStop(0.65, "#f3eeff");
-  gradient.addColorStop(1, "#d9c8ff");
+  gradient.addColorStop(0, "rgba(255,255,255,0.18)");
+  gradient.addColorStop(0.5, "rgba(210,185,255,0.08)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
   context.fillStyle = gradient;
   context.beginPath();
-  context.arc(canvas.width / 2, canvas.height / 2, 420, 0, Math.PI * 2);
+  context.arc(canvas.width / 2, canvas.height / 2, 435, 0, Math.PI * 2);
   context.fill();
 
-  context.fillStyle = "#ffffff";
+  context.fillStyle = "rgba(12, 8, 18, 0.92)";
   context.beginPath();
   context.arc(canvas.width / 2, canvas.height / 2, 360, 0, Math.PI * 2);
   context.fill();
 
-  context.strokeStyle = "rgba(194, 164, 255, 0.28)";
-  context.lineWidth = 14;
+  context.strokeStyle = "rgba(194, 164, 255, 0.5)";
+  context.lineWidth = 16;
   context.beginPath();
   context.arc(canvas.width / 2, canvas.height / 2, 360, 0, Math.PI * 2);
+  context.stroke();
+
+  context.strokeStyle = "rgba(255, 255, 255, 0.1)";
+  context.lineWidth = 6;
+  context.beginPath();
+  context.arc(canvas.width / 2, canvas.height / 2, 330, 0, Math.PI * 2);
   context.stroke();
 
   const svgMarkup = renderToStaticMarkup(<Icon size={300} color={color} />);
@@ -96,8 +99,15 @@ function createIconTexture(
 
   const drawIcon = (x: number) => {
     context.save();
+    context.beginPath();
+    context.fillStyle = "rgba(255,255,255,0.08)";
+    context.arc(x, canvas.height / 2, 120, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+
+    context.save();
     context.translate(x, canvas.height / 2);
-    context.drawImage(image, -150, -150, 300, 300);
+    context.drawImage(image, -160, -160, 320, 320);
     context.restore();
   };
 
@@ -251,13 +261,14 @@ const TechStack = () => {
       (texture) =>
         new THREE.MeshPhysicalMaterial({
           map: texture,
-          emissive: "#ffffff",
+          color: "#181021",
+          emissive: "#8f6bff",
           emissiveMap: texture,
-          emissiveIntensity: 0.12,
-          metalness: 0.08,
-          roughness: 0.32,
-          clearcoat: 0.45,
-          clearcoatRoughness: 0.18,
+          emissiveIntensity: 0.4,
+          metalness: 0.22,
+          roughness: 0.18,
+          clearcoat: 0.7,
+          clearcoatRoughness: 0.12,
         })
     );
   }, []);
