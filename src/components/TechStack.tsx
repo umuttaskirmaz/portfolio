@@ -13,17 +13,11 @@ import {
 } from "@react-three/rapier";
 import {
   SiCss3,
-  SiExpress,
-  SiGit,
   SiHtml5,
   SiJavascript,
   SiMysql,
   SiNextdotjs,
-  SiNodedotjs,
   SiPhp,
-  SiPython,
-  SiReact,
-  SiTypescript,
   SiUnity,
 } from "react-icons/si";
 import { FaJava } from "react-icons/fa6";
@@ -32,32 +26,16 @@ import { useLocale } from "../context/LocaleProvider";
 import { siteCopy } from "../data/portfolioData";
 
 const stackIcons = [
-  { Icon: SiReact, color: "#61dafb" },
+  { Icon: SiJavascript, color: "#ffffff" },
   { Icon: SiNextdotjs, color: "#ffffff" },
-  { Icon: SiNodedotjs, color: "#8cc84b" },
-  { Icon: SiExpress, color: "#ffffff" },
-  { Icon: SiJavascript, color: "#f7df1e" },
-  { Icon: SiTypescript, color: "#3178c6" },
   { Icon: SiUnity, color: "#ffffff" },
-  { Icon: SiPhp, color: "#8892bf" },
-  { Icon: SiPython, color: "#ffd43b" },
-  { Icon: TbBrandCSharp, color: "#a179dc" },
-  { Icon: FaJava, color: "#f89820" },
-  { Icon: SiMysql, color: "#00758f" },
-  { Icon: SiGit, color: "#f05032" },
+  { Icon: SiMysql, color: "#ffffff" },
+  { Icon: FaJava, color: "#ffffff" },
+  { Icon: SiPhp, color: "#ffffff" },
+  { Icon: TbBrandCSharp, color: "#ffffff" },
+  { Icon: SiHtml5, color: "#ffffff" },
+  { Icon: SiCss3, color: "#ffffff" },
 ];
-
-const featuredTechLogos = [
-  { Icon: SiJavascript, color: "#f7df1e", label: "JavaScript" },
-  { Icon: SiNextdotjs, color: "#ffffff", label: "Next.js" },
-  { Icon: SiUnity, color: "#ffffff", label: "Unity" },
-  { Icon: SiMysql, color: "#00758f", label: "MySQL" },
-  { Icon: FaJava, color: "#f89820", label: "Java" },
-  { Icon: SiPhp, color: "#8892bf", label: "PHP" },
-  { Icon: TbBrandCSharp, color: "#a179dc", label: "C#" },
-  { Icon: SiHtml5, color: "#e44d26", label: "HTML5" },
-  { Icon: SiCss3, color: "#1572b6", label: "CSS3" },
-] as const;
 
 function createIconTexture(
   Icon: ComponentType<{ size?: number; color?: string }>,
@@ -289,14 +267,6 @@ const TechStack = () => {
 
   return (
     <div className="techstack">
-      <div className="techstack-featured" aria-label="Featured technologies">
-        {featuredTechLogos.map(({ Icon, color, label }) => (
-          <div className="techstack-badge" key={label} title={label}>
-            <Icon size={28} color={color} />
-            <span>{label}</span>
-          </div>
-        ))}
-      </div>
       <h2>{copy.techTitle}</h2>
 
       <Canvas
