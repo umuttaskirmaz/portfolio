@@ -1,4 +1,11 @@
-import { lazy, PropsWithChildren, Suspense, useEffect, useState } from "react";
+import {
+  lazy,
+  PropsWithChildren,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import About from "./About";
 import Career from "./Career";
 import Contact from "./Contact";
@@ -20,6 +27,8 @@ const MainContainer = ({ children }: PropsWithChildren) => {
   const [isDesktopView, setIsDesktopView] = useState<boolean>(
     window.innerWidth > 1024
   );
+  const [shouldLoadTechStack, setShouldLoadTechStack] = useState(false);
+  const techStackRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const resizeHandler = () => {
@@ -31,7 +40,7 @@ const MainContainer = ({ children }: PropsWithChildren) => {
     return () => {
       window.removeEventListener("resize", resizeHandler);
     };
-  }, [isDesktopView]);
+  }, []);
 
   useEffect(() => {
     document.title = copy.metaTitle;
@@ -40,6 +49,28 @@ const MainContainer = ({ children }: PropsWithChildren) => {
   useEffect(() => {
     setSplitText();
   }, [locale]);
+
+  useEffect(() => {
+    if (!isDesktopView || shouldLoadTechStack || !techStackRef.current) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+
+        setShouldLoadTechStack(true);
+        observer.disconnect();
+      },
+      {
+        rootMargin: "300px 0px",
+      }
+    );
+
+    observer.observe(techStackRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isDesktopView, shouldLoadTechStack]);
 
   return (
     <div className="container-main">
@@ -54,9 +85,23 @@ const MainContainer = ({ children }: PropsWithChildren) => {
         <Career />
         <Work />
         {isDesktopView && (
-          <Suspense fallback={<div>{copy.fallbackLoading}</div>}>
-            <TechStack />
-          </Suspense>
+          <div ref={techStackRef}>
+            {shouldLoadTechStack ? (
+              <Suspense
+                fallback={
+                  <div className="techstack techstack-placeholder">
+                    <h2>{copy.techTitle}</h2>
+                  </div>
+                }
+              >
+                <TechStack />
+              </Suspense>
+            ) : (
+              <div className="techstack techstack-placeholder" aria-hidden="true">
+                <h2>{copy.techTitle}</h2>
+              </div>
+            )}
+          </div>
         )}
         <Contact />
       </div>

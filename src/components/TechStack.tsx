@@ -1,16 +1,8 @@
 import * as THREE from "three";
-import { ComponentType, useRef, useMemo, useState, useEffect } from "react";
+import { ComponentType, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment } from "@react-three/drei";
-import { EffectComposer, N8AO } from "@react-three/postprocessing";
 import { renderToStaticMarkup } from "react-dom/server";
-import {
-  BallCollider,
-  Physics,
-  RigidBody,
-  CylinderCollider,
-  RapierRigidBody,
-} from "@react-three/rapier";
 import {
   SiCss3,
   SiHtml5,
@@ -37,13 +29,45 @@ const stackIcons = [
   { Icon: SiCss3, color: "#ffffff" },
 ];
 
+type TechQuality = "high" | "balanced";
+
+type OrbConfig = {
+  scale: number;
+  materialIndex: number;
+  basePosition: [number, number, number];
+  speed: number;
+  amplitude: number;
+  spin: [number, number, number];
+};
+
+function resolveTechQuality(): TechQuality {
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+  const hasLowerMemory =
+    "deviceMemory" in navigator &&
+    (navigator as Navigator & { deviceMemory?: number }).deviceMemory !==
+      undefined
+      ? (navigator as Navigator & { deviceMemory?: number }).deviceMemory! <= 8
+      : false;
+  const hasLowerCpu =
+    "hardwareConcurrency" in navigator ? navigator.hardwareConcurrency <= 8 : false;
+
+  if (prefersReducedMotion || hasLowerMemory || hasLowerCpu) {
+    return "balanced";
+  }
+
+  return "high";
+}
+
 function createIconTexture(
   Icon: ComponentType<{ size?: number; color?: string }>,
-  color: string
+  color: string,
+  textureSize: number
 ) {
   const canvas = document.createElement("canvas");
-  canvas.width = 1024;
-  canvas.height = 1024;
+  canvas.width = textureSize;
+  canvas.height = textureSize;
 
   const context = canvas.getContext("2d");
   if (!context) {
@@ -53,37 +77,63 @@ function createIconTexture(
   const gradient = context.createRadialGradient(
     canvas.width / 2,
     canvas.height / 2,
-    120,
+    canvas.width * 0.12,
     canvas.width / 2,
     canvas.height / 2,
-    470
+    canvas.width * 0.46
   );
   gradient.addColorStop(0, "rgba(255,255,255,0.18)");
   gradient.addColorStop(0.5, "rgba(210,185,255,0.08)");
   gradient.addColorStop(1, "rgba(0,0,0,0)");
   context.fillStyle = gradient;
   context.beginPath();
-  context.arc(canvas.width / 2, canvas.height / 2, 435, 0, Math.PI * 2);
+  context.arc(
+    canvas.width / 2,
+    canvas.height / 2,
+    canvas.width * 0.425,
+    0,
+    Math.PI * 2
+  );
   context.fill();
 
   context.fillStyle = "rgba(12, 8, 18, 0.92)";
   context.beginPath();
-  context.arc(canvas.width / 2, canvas.height / 2, 360, 0, Math.PI * 2);
+  context.arc(
+    canvas.width / 2,
+    canvas.height / 2,
+    canvas.width * 0.352,
+    0,
+    Math.PI * 2
+  );
   context.fill();
 
   context.strokeStyle = "rgba(194, 164, 255, 0.5)";
-  context.lineWidth = 16;
+  context.lineWidth = textureSize * 0.016;
   context.beginPath();
-  context.arc(canvas.width / 2, canvas.height / 2, 360, 0, Math.PI * 2);
+  context.arc(
+    canvas.width / 2,
+    canvas.height / 2,
+    canvas.width * 0.352,
+    0,
+    Math.PI * 2
+  );
   context.stroke();
 
   context.strokeStyle = "rgba(255, 255, 255, 0.1)";
-  context.lineWidth = 6;
+  context.lineWidth = textureSize * 0.006;
   context.beginPath();
-  context.arc(canvas.width / 2, canvas.height / 2, 330, 0, Math.PI * 2);
+  context.arc(
+    canvas.width / 2,
+    canvas.height / 2,
+    canvas.width * 0.322,
+    0,
+    Math.PI * 2
+  );
   context.stroke();
 
-  const svgMarkup = renderToStaticMarkup(<Icon size={300} color={color} />);
+  const svgMarkup = renderToStaticMarkup(
+    <Icon size={Math.round(textureSize * 0.29)} color={color} />
+  );
   const image = new Image();
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -93,13 +143,14 @@ function createIconTexture(
     context.save();
     context.beginPath();
     context.fillStyle = "rgba(255,255,255,0.08)";
-    context.arc(x, canvas.height / 2, 120, 0, Math.PI * 2);
+    context.arc(x, canvas.height / 2, textureSize * 0.117, 0, Math.PI * 2);
     context.fill();
     context.restore();
 
     context.save();
     context.translate(x, canvas.height / 2);
-    context.drawImage(image, -160, -160, 320, 320);
+    const drawSize = textureSize * 0.313;
+    context.drawImage(image, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
     context.restore();
   };
 
@@ -114,104 +165,119 @@ function createIconTexture(
   return texture;
 }
 
-const sphereGeometry = new THREE.SphereGeometry(1, 28, 28);
+function buildOrbConfigs(quality: TechQuality): OrbConfig[] {
+  const count = quality === "high" ? 18 : 12;
 
-const spheres = [...Array(30)].map((_, index) => ({
-  scale: [0.7, 1, 0.8, 1, 1][Math.floor(Math.random() * 5)],
-  materialIndex: index % stackIcons.length,
-}));
+  return Array.from({ length: count }, (_, index) => {
+    const ring = 5.5 + (index % 3) * 1.6;
+    const angle = (index / count) * Math.PI * 2;
 
-type SphereProps = {
-  vec?: THREE.Vector3;
-  scale: number;
-  r?: typeof THREE.MathUtils.randFloatSpread;
-  material: THREE.MeshPhysicalMaterial;
-  isActive: boolean;
-};
+    return {
+      scale: [0.78, 0.95, 0.84, 1, 0.88][index % 5],
+      materialIndex: index % stackIcons.length,
+      basePosition: [
+        Math.cos(angle) * ring,
+        (index % 5) - 2.4,
+        Math.sin(angle) * (ring * 0.48) - 1.5,
+      ],
+      speed: 0.45 + (index % 4) * 0.08,
+      amplitude: 0.22 + (index % 3) * 0.08,
+      spin: [0.2 + index * 0.01, 0.35 + index * 0.012, 0.12],
+    };
+  });
+}
 
-function SphereGeo({
-  vec = new THREE.Vector3(),
-  scale,
-  r = THREE.MathUtils.randFloatSpread,
+function FloatingOrb({
+  config,
   material,
+  geometry,
+  pointerTarget,
   isActive,
-}: SphereProps) {
-  const api = useRef<RapierRigidBody | null>(null);
+}: {
+  config: OrbConfig;
+  material: THREE.MeshPhysicalMaterial;
+  geometry: THREE.SphereGeometry;
+  pointerTarget: THREE.Vector3;
+  isActive: boolean;
+}) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const phase = useMemo(() => Math.random() * Math.PI * 2, []);
+  const tempVec = useMemo(() => new THREE.Vector3(), []);
 
-  useFrame((_state, delta) => {
-    if (!isActive) return;
-    delta = Math.min(0.1, delta);
-    const impulse = vec
-      .copy(api.current!.translation())
-      .normalize()
-      .multiply(
-        new THREE.Vector3(
-          -50 * delta * scale,
-          -150 * delta * scale,
-          -50 * delta * scale
-        )
-      );
+  useFrame(({ clock }, delta) => {
+    const mesh = meshRef.current;
+    if (!mesh) return;
 
-    api.current?.applyImpulse(impulse, true);
+    const elapsed = clock.getElapsedTime() * config.speed + phase;
+    const sway = Math.sin(elapsed) * config.amplitude;
+    const drift = Math.cos(elapsed * 1.2) * config.amplitude * 0.55;
+
+    tempVec.set(
+      config.basePosition[0] + sway + pointerTarget.x * config.scale * 0.18,
+      config.basePosition[1] + drift + pointerTarget.y * config.scale * 0.18,
+      config.basePosition[2] + Math.sin(elapsed * 0.7) * 0.18
+    );
+
+    mesh.position.lerp(tempVec, Math.min(1, delta * (isActive ? 2.6 : 1.4)));
+    mesh.rotation.x += delta * config.spin[0];
+    mesh.rotation.y += delta * config.spin[1];
+    mesh.rotation.z += delta * config.spin[2];
   });
 
   return (
-    <RigidBody
-      linearDamping={0.75}
-      angularDamping={0.15}
-      friction={0.2}
-      position={[r(20), r(20) - 25, r(20) - 10]}
-      ref={api}
-      colliders={false}
-    >
-      <BallCollider args={[scale]} />
-      <CylinderCollider
-        rotation={[Math.PI / 2, 0, 0]}
-        position={[0, 0, 1.2 * scale]}
-        args={[0.15 * scale, 0.275 * scale]}
-      />
-      <mesh
-        castShadow
-        receiveShadow
-        scale={scale}
-        geometry={sphereGeometry}
-        material={material}
-        rotation={[0.3, 1, 1]}
-      />
-    </RigidBody>
+    <mesh
+      ref={meshRef}
+      castShadow
+      receiveShadow
+      scale={config.scale}
+      geometry={geometry}
+      material={material}
+      position={config.basePosition}
+    />
   );
 }
 
-type PointerProps = {
-  vec?: THREE.Vector3;
+function FloatingOrbs({
+  configs,
+  materials,
+  geometry,
+  isActive,
+}: {
+  configs: OrbConfig[];
+  materials: THREE.MeshPhysicalMaterial[];
+  geometry: THREE.SphereGeometry;
   isActive: boolean;
-};
+}) {
+  const pointerTarget = useMemo(() => new THREE.Vector3(), []);
 
-function Pointer({ vec = new THREE.Vector3(), isActive }: PointerProps) {
-  const ref = useRef<RapierRigidBody>(null);
-
-  useFrame(({ pointer, viewport }) => {
-    if (!isActive) return;
-    const targetVec = vec.lerp(
-      new THREE.Vector3(
-        (pointer.x * viewport.width) / 2,
-        (pointer.y * viewport.height) / 2,
-        0
-      ),
-      0.2
+  useFrame(({ pointer }, delta) => {
+    const targetX = pointer.x * 2.1;
+    const targetY = pointer.y * 1.1;
+    pointerTarget.x = THREE.MathUtils.lerp(
+      pointerTarget.x,
+      isActive ? targetX : 0,
+      Math.min(1, delta * 2.4)
     );
-    ref.current?.setNextKinematicTranslation(targetVec);
+    pointerTarget.y = THREE.MathUtils.lerp(
+      pointerTarget.y,
+      isActive ? targetY : 0,
+      Math.min(1, delta * 2.4)
+    );
   });
 
   return (
-    <RigidBody
-      position={[100, 100, 100]}
-      type="kinematicPosition"
-      colliders={false}
-      ref={ref}
-    >
-      <BallCollider args={[2]} />
-    </RigidBody>
+    <>
+      {configs.map((config, index) => (
+        <FloatingOrb
+          key={index}
+          config={config}
+          material={materials[config.materialIndex]}
+          geometry={geometry}
+          pointerTarget={pointerTarget}
+          isActive={isActive}
+        />
+      ))}
+    </>
   );
 }
 
@@ -219,34 +285,39 @@ const TechStack = () => {
   const { locale } = useLocale();
   const copy = siteCopy[locale];
   const [isActive, setIsActive] = useState(false);
+  const quality = useMemo(resolveTechQuality, []);
+  const textureSize = quality === "high" ? 768 : 512;
+  const geometry = useMemo(
+    () =>
+      new THREE.SphereGeometry(
+        1,
+        quality === "high" ? 20 : 14,
+        quality === "high" ? 20 : 14
+      ),
+    [quality]
+  );
+  const orbConfigs = useMemo(() => buildOrbConfigs(quality), [quality]);
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollY = window.scrollY || document.documentElement.scrollTop;
-      const threshold = document
-        .getElementById("work")!
-        .getBoundingClientRect().top;
-      setIsActive(scrollY > threshold);
+      const workSection = document.getElementById("work");
+      if (!workSection) return;
+
+      const rect = workSection.getBoundingClientRect();
+      setIsActive(rect.top < window.innerHeight && rect.bottom > 0);
     };
-    document.querySelectorAll(".header a").forEach((elem) => {
-      const element = elem as HTMLAnchorElement;
-      element.addEventListener("click", () => {
-        const interval = setInterval(() => {
-          handleScroll();
-        }, 10);
-        setTimeout(() => {
-          clearInterval(interval);
-        }, 1000);
-      });
-    });
+
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
+
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
   const materials = useMemo(() => {
     const textures = stackIcons.map(({ Icon, color }) =>
-      createIconTexture(Icon, color)
+      createIconTexture(Icon, color, textureSize)
     );
 
     return textures.map(
@@ -256,55 +327,60 @@ const TechStack = () => {
           color: "#181021",
           emissive: "#8f6bff",
           emissiveMap: texture,
-          emissiveIntensity: 0.4,
-          metalness: 0.22,
-          roughness: 0.18,
-          clearcoat: 0.7,
-          clearcoatRoughness: 0.12,
+          emissiveIntensity: quality === "high" ? 0.34 : 0.24,
+          metalness: quality === "high" ? 0.2 : 0.16,
+          roughness: quality === "high" ? 0.2 : 0.28,
+          clearcoat: quality === "high" ? 0.55 : 0.35,
+          clearcoatRoughness: quality === "high" ? 0.14 : 0.22,
         })
     );
-  }, []);
+  }, [quality, textureSize]);
+
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+      materials.forEach((material) => {
+        material.map?.dispose();
+        material.emissiveMap?.dispose();
+        material.dispose();
+      });
+    };
+  }, [geometry, materials]);
 
   return (
     <div className="techstack">
       <h2>{copy.techTitle}</h2>
 
       <Canvas
-        shadows
-        gl={{ alpha: true, stencil: false, depth: false, antialias: false }}
-        camera={{ position: [0, 0, 20], fov: 32.5, near: 1, far: 100 }}
-        onCreated={(state) => (state.gl.toneMappingExposure = 1.5)}
+        dpr={quality === "high" ? [1, 1.25] : [1, 1]}
+        gl={{
+          alpha: true,
+          antialias: false,
+          powerPreference: "high-performance",
+        }}
+        camera={{ position: [0, 0, 18], fov: 34, near: 1, far: 100 }}
+        onCreated={(state) => {
+          state.gl.toneMappingExposure = quality === "high" ? 1.45 : 1.25;
+        }}
         className="tech-canvas"
       >
-        <ambientLight intensity={1} />
-        <spotLight
-          position={[20, 20, 25]}
-          penumbra={1}
-          angle={0.2}
-          color="white"
-          castShadow
-          shadow-mapSize={[512, 512]}
+        <ambientLight intensity={quality === "high" ? 1.05 : 0.9} />
+        <directionalLight
+          position={[12, 10, 16]}
+          intensity={quality === "high" ? 1.8 : 1.25}
         />
-        <directionalLight position={[0, 5, -4]} intensity={2} />
-        <Physics gravity={[0, 0, 0]}>
-          <Pointer isActive={isActive} />
-          {spheres.map((props, i) => (
-            <SphereGeo
-              key={i}
-              {...props}
-              material={materials[props.materialIndex]}
-              isActive={isActive}
-            />
-          ))}
-        </Physics>
+        <pointLight position={[-8, 4, 8]} intensity={quality === "high" ? 22 : 15} color="#6d3dff" />
+        <FloatingOrbs
+          configs={orbConfigs}
+          materials={materials}
+          geometry={geometry}
+          isActive={isActive}
+        />
         <Environment
           files="/models/char_enviorment.hdr"
-          environmentIntensity={0.5}
+          environmentIntensity={quality === "high" ? 0.42 : 0.24}
           environmentRotation={[0, 4, 2]}
         />
-        <EffectComposer enableNormalPass={false}>
-          <N8AO color="#0f002c" aoRadius={2} intensity={1.15} />
-        </EffectComposer>
       </Canvas>
     </div>
   );

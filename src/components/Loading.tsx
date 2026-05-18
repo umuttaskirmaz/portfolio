@@ -5,22 +5,48 @@ import { profile } from "../data/portfolioData";
 import { useLocale } from "../context/LocaleProvider";
 import { siteCopy } from "../data/portfolioData";
 
-import Marquee from "react-fast-marquee";
-
-const Loading = ({ percent }: { percent: number }) => {
+const Loading = () => {
   const { setIsLoading } = useLoading();
   const { locale } = useLocale();
   const copy = siteCopy[locale];
+  const [percent, setPercent] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [clicked, setClicked] = useState(false);
+  const [hoverPoint, setHoverPoint] = useState({ x: "50%", y: "50%" });
+
+  useEffect(() => {
+    let animationFrameId = 0;
+    let startTime = 0;
+    const duration = 650;
+
+    const animateProgress = (timestamp: number) => {
+      if (!startTime) {
+        startTime = timestamp;
+      }
+
+      const elapsed = timestamp - startTime;
+      const nextPercent = Math.min(100, Math.round((elapsed / duration) * 100));
+      setPercent((current) => (nextPercent > current ? nextPercent : current));
+
+      if (nextPercent < 100) {
+        animationFrameId = window.requestAnimationFrame(animateProgress);
+      }
+    };
+
+    animationFrameId = window.requestAnimationFrame(animateProgress);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
 
   useEffect(() => {
     if (percent < 100 || loaded) return;
 
     const loadedTimeout = window.setTimeout(() => {
       setLoaded(true);
-    }, 600);
+    }, 120);
 
     return () => {
       window.clearTimeout(loadedTimeout);
@@ -32,7 +58,7 @@ const Loading = ({ percent }: { percent: number }) => {
 
     const isLoadedTimeout = window.setTimeout(() => {
       setIsLoaded(true);
-    }, 1000);
+    }, 160);
 
     return () => {
       window.clearTimeout(isLoadedTimeout);
@@ -42,36 +68,34 @@ const Loading = ({ percent }: { percent: number }) => {
   useEffect(() => {
     if (!isLoaded) return;
 
-    let isMounted = true;
     let timeoutId: number | undefined;
+    let animationFrameId = 0;
 
-    import("./utils/initialFX").then((module) => {
-      if (!isMounted) return;
-
-      setClicked(true);
-      timeoutId = window.setTimeout(() => {
-        if (module.initialFX) {
-          module.initialFX();
-        }
-        setIsLoading(false);
-      }, 900);
-    });
+    setClicked(true);
+    timeoutId = window.setTimeout(() => {
+      setIsLoading(false);
+      animationFrameId = window.requestAnimationFrame(() => {
+        import("./utils/initialFX").then((module) => {
+          module.initialFX?.();
+        });
+      });
+    }, 180);
 
     return () => {
-      isMounted = false;
       if (timeoutId) {
         window.clearTimeout(timeoutId);
       }
+      window.cancelAnimationFrame(animationFrameId);
     };
   }, [isLoaded]);
 
   function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
+    if (clicked) return;
     const { currentTarget: target } = e;
     const rect = target.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    target.style.setProperty("--mouse-x", `${x}px`);
-    target.style.setProperty("--mouse-y", `${y}px`);
+    setHoverPoint({ x: `${x}px`, y: `${y}px` });
   }
 
   return (
@@ -93,16 +117,18 @@ const Loading = ({ percent }: { percent: number }) => {
       </div>
       <div className="loading-screen">
         <div className="loading-marquee">
-          <Marquee>
-            <span> {copy.loadingTicker[0]}</span>
-            <span> {copy.loadingTicker[1]}</span>
-            <span> {copy.loadingTicker[0]}</span>
-            <span> {copy.loadingTicker[1]}</span>
-          </Marquee>
+          <span> {copy.loadingTicker[0]}</span>
+          <span> {copy.loadingTicker[1]}</span>
         </div>
         <div
           className={`loading-wrap ${clicked && "loading-clicked"}`}
           onMouseMove={(e) => handleMouseMove(e)}
+          style={
+            {
+              "--mouse-x": hoverPoint.x,
+              "--mouse-y": hoverPoint.y,
+            } as React.CSSProperties
+          }
         >
           <div className="loading-hover"></div>
           <div className={`loading-button ${loaded && "loading-complete"}`}>
@@ -125,45 +151,3 @@ const Loading = ({ percent }: { percent: number }) => {
 };
 
 export default Loading;
-
-export const setProgress = (setLoading: (value: number) => void) => {
-  let percent: number = 0;
-
-  let interval = setInterval(() => {
-    if (percent <= 50) {
-      let rand = Math.round(Math.random() * 5);
-      percent = percent + rand;
-      setLoading(percent);
-    } else {
-      clearInterval(interval);
-      interval = setInterval(() => {
-        percent = percent + Math.round(Math.random());
-        setLoading(percent);
-        if (percent > 91) {
-          clearInterval(interval);
-        }
-      }, 2000);
-    }
-  }, 100);
-
-  function clear() {
-    clearInterval(interval);
-    setLoading(100);
-  }
-
-  function loaded() {
-    return new Promise<number>((resolve) => {
-      clearInterval(interval);
-      interval = setInterval(() => {
-        if (percent < 100) {
-          percent++;
-          setLoading(percent);
-        } else {
-          resolve(percent);
-          clearInterval(interval);
-        }
-      }, 2);
-    });
-  }
-  return { loaded, percent, clear };
-};

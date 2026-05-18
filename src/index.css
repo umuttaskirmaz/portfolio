@@ -113,6 +113,12 @@ body {
   text-transform: uppercase;
 }
 
+.techstack-placeholder {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(194, 164, 255, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+}
+
 @media screen and (min-width: 768px) {
   body {
     --cWidth: 94%;

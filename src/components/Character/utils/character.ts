@@ -15,19 +15,20 @@ const setCharacter = (
 
   const loadCharacter = () => {
     return new Promise<GLTF | null>(async (resolve, reject) => {
+      let blobUrl: string | null = null;
+
       try {
         const encryptedBlob = await decryptFile(
           "/models/character.enc",
           "Character3D#@"
         );
-        const blobUrl = URL.createObjectURL(new Blob([encryptedBlob]));
+        blobUrl = URL.createObjectURL(new Blob([encryptedBlob]));
 
         let character: THREE.Object3D;
         loader.load(
           blobUrl,
           async (gltf) => {
             character = gltf.scene;
-            await renderer.compileAsync(character, camera, scene);
             character.traverse((child: any) => {
               if (child.isMesh) {
                 const mesh = child as THREE.Mesh;
@@ -37,19 +38,31 @@ const setCharacter = (
               }
             });
             resolve(gltf);
+            window.requestIdleCallback?.(() => {
+              renderer.compileAsync(character, camera, scene).catch(() => undefined);
+            }, { timeout: 2000 });
             setCharTimeline(character, camera);
             setAllTimeline();
             character!.getObjectByName("footR")!.position.y = 3.36;
             character!.getObjectByName("footL")!.position.y = 3.36;
             dracoLoader.dispose();
+            if (blobUrl) {
+              URL.revokeObjectURL(blobUrl);
+            }
           },
           undefined,
           (error) => {
             console.error("Error loading GLTF model:", error);
+            if (blobUrl) {
+              URL.revokeObjectURL(blobUrl);
+            }
             reject(error);
           }
         );
       } catch (err) {
+        if (blobUrl) {
+          URL.revokeObjectURL(blobUrl);
+        }
         reject(err);
         console.error(err);
       }

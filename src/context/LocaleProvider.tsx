@@ -27,9 +27,22 @@ export const LocaleProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   const setLocale = (nextLocale: Locale) => {
+    if (nextLocale === locale) return;
+
+    const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+    document.documentElement.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
     setLocaleState(nextLocale);
     window.localStorage.setItem("portfolio-locale", nextLocale);
     document.documentElement.lang = nextLocale;
+
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.style.scrollBehavior = previousScrollBehavior;
+      });
+    });
   };
 
   useEffect(() => {
