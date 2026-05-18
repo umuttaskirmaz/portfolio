@@ -2,6 +2,7 @@ import {
   createContext,
   PropsWithChildren,
   useContext,
+  useEffect,
   useState,
 } from "react";
 import Loading from "../components/Loading";
@@ -9,31 +10,25 @@ import Loading from "../components/Loading";
 interface LoadingType {
   isLoading: boolean;
   setIsLoading: (state: boolean) => void;
-  restartLoading: () => void;
+  setLoading: (percent: number) => void;
 }
 
 export const LoadingContext = createContext<LoadingType | null>(null);
 
 export const LoadingProvider = ({ children }: PropsWithChildren) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingKey, setLoadingKey] = useState(0);
-
-  const restartLoading = () => {
-    document.body.style.overflowY = "hidden";
-    document.getElementsByTagName("main")[0]?.classList.remove("main-active");
-    setLoadingKey((current) => current + 1);
-    setIsLoading(true);
-  };
+  const [loading, setLoading] = useState(0);
 
   const value = {
     isLoading,
     setIsLoading,
-    restartLoading,
+    setLoading,
   };
+  useEffect(() => {}, [loading]);
 
   return (
     <LoadingContext.Provider value={value as LoadingType}>
-      {isLoading && <Loading key={loadingKey} />}
+      {isLoading && <Loading percent={loading} />}
       <main className="main-body">{children}</main>
     </LoadingContext.Provider>
   );

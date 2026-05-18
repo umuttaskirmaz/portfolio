@@ -9,32 +9,26 @@ const WhatIDo = () => {
   const copy = siteCopy[locale];
   const focusCards = copy.focusCards;
   const containerRef = useRef<(HTMLDivElement | null)[]>([]);
-
   const setRef = (el: HTMLDivElement | null, index: number) => {
     containerRef.current[index] = el;
   };
-
   useEffect(() => {
-    if (!ScrollTrigger.isTouch) return;
-
-    const clickHandlers = new Map<HTMLDivElement, () => void>();
-
-    containerRef.current.forEach((container) => {
-      if (!container) return;
-      container.classList.remove("what-noTouch");
-
-      const onClick = () => handleClick(container);
-      clickHandlers.set(container, onClick);
-      container.addEventListener("click", onClick);
-    });
-
+    if (ScrollTrigger.isTouch) {
+      containerRef.current.forEach((container) => {
+        if (container) {
+          container.classList.remove("what-noTouch");
+          container.addEventListener("click", () => handleClick(container));
+        }
+      });
+    }
     return () => {
-      clickHandlers.forEach((handler, container) => {
-        container.removeEventListener("click", handler);
+      containerRef.current.forEach((container) => {
+        if (container) {
+          container.removeEventListener("click", () => handleClick(container));
+        }
       });
     };
   }, []);
-
   return (
     <div className="whatIDO" key={locale}>
       <div className="what-box">

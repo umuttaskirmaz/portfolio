@@ -9,45 +9,28 @@ const Navbar = () => {
   const copy = siteCopy[locale];
 
   useEffect(() => {
-    const links = document.querySelectorAll(".header ul a");
-    const handlers = new Map<HTMLAnchorElement, (e: Event) => void>();
-
+    let links = document.querySelectorAll(".header ul a");
     links.forEach((elem) => {
-      const element = elem as HTMLAnchorElement;
-      const onClick = (e: Event) => {
+      let element = elem as HTMLAnchorElement;
+      element.addEventListener("click", (e) => {
         e.preventDefault();
-        const currentLink = e.currentTarget as HTMLAnchorElement;
-        const section = currentLink.getAttribute("data-href");
+        let elem = e.currentTarget as HTMLAnchorElement;
+        let section = elem.getAttribute("data-href");
         if (section) {
           document.querySelector(section)?.scrollIntoView({
             behavior: "smooth",
             block: "start",
           });
         }
-      };
-
-      handlers.set(element, onClick);
-      element.addEventListener("click", onClick);
-    });
-
-    return () => {
-      handlers.forEach((handler, element) => {
-        element.removeEventListener("click", handler);
       });
-    };
+    });
   }, []);
-
   return (
     <>
       <label className="navbar-locale-floating" data-cursor="disable">
         <select
           value={locale}
-          onChange={(e) => {
-            const nextLocale = e.target.value as "tr" | "en";
-            if (nextLocale === locale) return;
-            setLocale(nextLocale);
-            window.location.reload();
-          }}
+          onChange={(e) => setLocale(e.target.value as "tr" | "en")}
           aria-label="Language selector"
         >
           <option value="tr">Türkçe</option>

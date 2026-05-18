@@ -3,55 +3,42 @@ import { GLTF } from "three-stdlib";
 import { eyebrowBoneNames, typingBoneNames } from "../../../data/boneData";
 
 const setAnimations = (gltf: GLTF) => {
-  const character = gltf.scene;
-  const mixer = new THREE.AnimationMixer(character);
-  const idleActions: THREE.AnimationAction[] = [];
-  let introAction: THREE.AnimationAction | null = null;
-
+  let character = gltf.scene;
+  let mixer = new THREE.AnimationMixer(character);
   if (gltf.animations) {
     const introClip = gltf.animations.find(
       (clip) => clip.name === "introAnimation"
     );
-    if (introClip) {
-      introAction = mixer.clipAction(introClip);
-      introAction.setLoop(THREE.LoopOnce, 1);
-      introAction.clampWhenFinished = true;
-      introAction.enabled = true;
-      introAction.stop();
-    }
-
+    const introAction = mixer.clipAction(introClip!);
+    introAction.setLoop(THREE.LoopOnce, 1);
+    introAction.clampWhenFinished = true;
+    introAction.play();
     const clipNames = ["key1", "key2", "key5", "key6"];
     clipNames.forEach((name) => {
       const clip = THREE.AnimationClip.findByName(gltf.animations, name);
       if (clip) {
-        const action = mixer.clipAction(clip);
-        action.timeScale = 1.2;
-        action.enabled = true;
-        action.paused = true;
-        idleActions.push(action);
+        const action = mixer?.clipAction(clip);
+        action!.play();
+        action!.timeScale = 1.2;
       } else {
         console.error(`Animation "${name}" not found`);
       }
     });
-
-    const typingAction = createBoneAction(gltf, mixer, "typing", typingBoneNames);
+    let typingAction: THREE.AnimationAction | null = null;
+    typingAction = createBoneAction(gltf, mixer, "typing", typingBoneNames);
     if (typingAction) {
       typingAction.enabled = true;
+      typingAction.play();
       typingAction.timeScale = 1.2;
-      typingAction.paused = true;
-      idleActions.push(typingAction);
     }
   }
-
   function startIntro() {
-    introAction?.reset().play();
-
-    idleActions.forEach((action) => {
-      action.reset();
-      action.paused = false;
-      action.play();
-    });
-
+    const introClip = gltf.animations.find(
+      (clip) => clip.name === "introAnimation"
+    );
+    const introAction = mixer.clipAction(introClip!);
+    introAction.clampWhenFinished = true;
+    introAction.reset().play();
     setTimeout(() => {
       const blink = gltf.animations.find((clip) => clip.name === "Blink");
       mixer.clipAction(blink!).play().fadeIn(0.5);
